@@ -1,200 +1,132 @@
-interface IDataBase{
-    busStopExists: (busStop : BusStop) => boolean;
-    busRouteExists: (busRoute : number) => boolean;
-    busExists: (bus : Bus) => boolean;
-    createBusStop: (busStop : BusStop) => void;
-    createBusRoute: (busRoute : number) => void;
-    createBus: (bus : Bus) => void;
-    setBusNextBusStop: (bus : Bus, busStop : BusStop) => void;
-    getNextBusStop: (bus : Bus) => BusStop;
-    getPreviousBusStop: (bus : Bus) => BusStop;
-    getBusStopComingBusses: (busStop : string) => Bus[];
-    setBusStopComingBusses: (busStop : BusStop, comingBusses : Bus[]) => void;
-    getRouteBusses: (busRoute : number) => Bus[];
-}
-
-class DataBase implements IDataBase{
-    private fs : any;
-
-    constructor (){
-        this.fs = require("fs");
-    }
-
-    busStopExists (busStop: BusStop): boolean{
-        return false;
-    }
-
-    busRouteExists (busRoute: number): boolean{
-        return this.fs.existsSync(`./information/Busses/${busRoute}`);
-    }
-
-    busExists (bus: Bus): boolean{
-        return this.fs.existsSync(`./information/Busses/${bus.getBusRoute()}/${bus.getBusNumber()}.txt`);
-    }
-
-    createBus (bus: Bus): void{
-        this.fs.writeFile(`./information/Busses/${bus.getBusRoute()}/${bus.getBusNumber()}.txt`, "full kex", function(error : any){
-            if (error){
-                console.log(error)
-                return;
-            }
-
-            console.log("Created Successfully!")
-        })
-    }
-
-    createBusRoute (busRoute: number): void{
-        this.fs.mkdirSync(`./information/Busses/${busRoute}`);
-    }
-
-    createBusStop (busStop: BusStop): void{
-        this.fs.writeFile(`./information/BusStops/${busStop.GetName()}`)
-    }
-
-    getBusStopComingBusses (busStop : string): Bus[]{
-        return [new Bus(69, 228)];
-    }
-
-    getNextBusStop(bus : Bus): BusStop{
-        let data = this.fs.readFileSync(`./information/Busses/${bus.getBusRoute()}/${bus.getBusNumber()}.txt`,
-        'utf8', function(error : any, data : any){
-            if (error){
-                console.log(error);
-                return;
-            }
-        });
-        return data.split('\n')[0].split(':')[1].replace("\r", "");
-    }
-
-    getPreviousBusStop(bus : Bus): BusStop{
-        let data = this.fs.readFileSync(`./information/Busses/${bus.getBusRoute()}/${bus.getBusNumber()}.txt`,
-        'utf8', function(error : any, data : any){
-            if (error){
-                console.log(error);
-                return;
-            }
-        });
-        return data.split('\n')[1].split(':')[1];
-    }
-
-    setBusStopComingBusses (busStop : BusStop, comingBusses : Bus[]): void{
-        comingBusses.forEach((comingBus : Bus) => {
-            this.fs.appendFileSync(`${comingBus.getBusRoute()}:${comingBus.getBusNumber()},`)
-        });
-    }
-
-    setBusNextBusStop (bus : Bus, busStop : BusStop) : void{
-        let data = this.fs.readFileSync(`./information/Busses/${bus.getBusRoute()}/${bus.getBusNumber()}.txt`,
-        'utf8', function(error : any, data : any){
-            if (error){
-                console.log(error);
-                return;
-            }
-        });
-        data.split('\n')[1].split(':')[1] = data.split('\n')[0].split(':')[1]
-        data.split('\n')[0].split(':')[1] = busStop.GetName();
-    }
-
-    getRouteBusses (busRoute : number) : Bus[]{
-        let busses : Bus[] = new Array<Bus>;
-        this.fs.readdirSync(`./information/Busses/${busRoute}`).
-            forEach((file : any) => {
-                busses.push(new Bus(busRoute, file.replace(".txt", "")));
-            });
-        return busses;
-    }
-
-}
-
-class DataBaseProvider{
-    private dataBase : DataBase = new DataBase();
-
-    getDataBase() : DataBase {
-        return this.dataBase;
-    }
-}
-
 class Bus{
-    private busRoute : number;
+    private busRouteNumber : number;
     private busNumber : number;
+    private nextBusStop : string;
 
-    constructor(busRoute : number, busNumber : number) {
-        this.busRoute = busRoute;
+    constructor(busRouteNumber : number, busNumber : number) {
+        this.busRouteNumber = busRouteNumber;
         this.busNumber = busNumber;
+        this.nextBusStop = "";
     }
 
-    getBusRoute () : number{
-        return this.busRoute;
+    SetNextBusStop(nextBusStop : string) : void {
+        this.nextBusStop = nextBusStop;
     }
 
-    getBusNumber () : number{
+    GetNextBusStopName() : string {
+        return this.nextBusStop;
+    }
+
+    GetBusRouteNumber () : number{
+        return this.busRouteNumber;
+    }
+
+    GetBusNumber () : number{
         return this.busNumber;
     }
 }
 
-class BusStop{
-    private busStopName : string;
+class Notifier {
+    private webHooks = new Array<string>();
 
-    constructor(busStopName : string) {
-        this.busStopName = busStopName;
+    public AddWebhook(webHookHost : string) : void {
+        this.webHooks.push(webHookHost);
     }
 
-    public GetName() : string{
-        return this.busStopName;
+    public Notify() : void {
+
     }
 }
 
+class DataBase {
+    private busses = new Array<Bus>();
+    private busStops = new Array<string>();
+    private busRoutes = new Array<number>();
+
+    constructor() {
+        this.busses.push(new Bus(69, 1111));
+        this.busses.push(new Bus(228, 1112));
+
+        this.busStops.push("Остановка 1", "Остановка 2", "Остановка 3", "Остановка 4");
+
+        this.busRoutes.push(69, 228);
+    }
+
+    SetNextBusStop(busNumber : number, busStop : string) : void {
+        this.busses.find(b => b.GetBusNumber() == busNumber)?.SetNextBusStop(busStop);
+    }
+
+    GetBusses() : Array<Bus> {
+        return this.busses;
+    }
+
+    GetBusStops() : Array<string> {
+        return this.busStops;
+    }
+
+    GetBusRoutes() : Array<number> {
+        return this.busRoutes;
+    }
+}
+
+const request = require('request');
 const express = require('express');
 const app = express();
-const HOST = '26.88.209.221';
+const HOST = '127.0.0.1';
 const PORT = 8080;
-const dataBase : IDataBase = new DataBaseProvider().getDataBase();
+const dataBase = new DataBase();
+const notifier = new Notifier(); 
 
 app.use(express.json());
 
-app.get('/Busses/:busRoute', (req : any, res : any) => {
-    const {busRoute} = req.params;
+app.post('/:busNumber', (req : any, res : any) => {
+    const { busNumber } = req.params;
+    const { nextBusStop } = req.body;
+
+    dataBase.SetNextBusStop(busNumber, nextBusStop);
+    notifier.Notify();
+})
+
+app.get('/BusRoutes', (req : any, res : any) => {
+    var busRoutes = dataBase.GetBusRoutes();
     res.status(200).send({
-        "Busses" : dataBase.getRouteBusses(busRoute)
-    })
-});
-
-app.get('/Busses/:busRoute/:busNumber', (req : any, res : any) => {
-    const {busRoute, busNumber} = req.params;
-    res.status(200).send({
-        "Next" : dataBase.getNextBusStop(new Bus(busRoute, busNumber)),
-        "Previous" : dataBase.getPreviousBusStop(new Bus(busRoute, busNumber))
-    })
-});
-
-app.get('/BusStops/:busStop', (req : any, res : any) => {
-
-});
-
-app.post('/Busses/:busRoute/:busNumber', (req : any, res : any) => {
-    const {busRoute, busNumber} = req.params;
-    const {nextBusStop} = res.body;
-    let bus : Bus = new Bus(busRoute, busNumber)
-
-    if (dataBase.busExists(bus) == false)
-        dataBase.createBus(bus)
-    
-    dataBase.setBusNextBusStop(bus, new BusStop(nextBusStop))
-});
-
-app.post('/BusStops/:busStopName', (req : any, res : any) => {
-    const {busStopName} = req.params;
-    const {comingBusses} = res.body;
-    let busses : Bus[] = new Array<Bus>;
-    comingBusses.forEach((comingBus : any) => {
-        busses.push(new Bus(comingBus[0], comingBus[1]))
+        busRoutes  
     });
+});
 
-    dataBase.setBusStopComingBusses(new BusStop(busStopName), comingBusses)
+app.get('/BusStops', (req : any, res : any) => {
+    var busStops = dataBase.GetBusStops();
+    res.status(200).send({
+        busStops
+    });
+});
 
+app.get('/BusRoutes/:busRouteNumber', (req : any, res : any) => {
+    const { busRouteNumber } = req.params;
+    var busses = dataBase.GetBusses().filter(b => b.GetBusRouteNumber() == busRouteNumber)
+
+    res.status(200).send({
+        busses
+    });
+});
+
+app.get('/BusStops/:busStopName', (req : any, res : any) => {
+    const { busStopName } = req.params;
+    var busses = dataBase.GetBusses().filter(b => b.GetNextBusStopName() == busStopName)
+    res.status(200).send({
+        busses
+    });
+});
+
+app.put('/hooks', (req : any, res : any) => {
+    const { webhookHost } = req.body;
+    notifier.AddWebhook(webhookHost);
+    res.status(200).send({
+        "Status" : "Fine"
+    });
 });
 
 app.listen(
     PORT, HOST,
     () => console.log(`Started on http://${HOST}:${PORT}`) 
-)
+);

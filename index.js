@@ -1,136 +1,104 @@
-var DataBase = /** @class */ (function () {
-    function DataBase() {
-        this.fs = require("fs");
-    }
-    DataBase.prototype.busStopExists = function (busStop) {
-        return false;
-    };
-    DataBase.prototype.busRouteExists = function (busRoute) {
-        return this.fs.existsSync("./information/Busses/".concat(busRoute));
-    };
-    DataBase.prototype.busExists = function (bus) {
-        return this.fs.existsSync("./information/Busses/".concat(bus.getBusRoute(), "/").concat(bus.getBusNumber(), ".txt"));
-    };
-    DataBase.prototype.createBus = function (bus) {
-        this.fs.writeFile("./information/Busses/".concat(bus.getBusRoute(), "/").concat(bus.getBusNumber(), ".txt"), "full kex", function (error) {
-            if (error) {
-                console.log(error);
-                return;
-            }
-            console.log("Created Successfully!");
-        });
-    };
-    DataBase.prototype.createBusRoute = function (busRoute) {
-        this.fs.mkdirSync("./information/Busses/".concat(busRoute));
-    };
-    DataBase.prototype.createBusStop = function (busStop) {
-        this.fs.writeFile("./information/BusStops/".concat(busStop.GetName()));
-    };
-    DataBase.prototype.getBusStopComingBusses = function (busStop) {
-        return [new Bus(69, 228)];
-    };
-    DataBase.prototype.getNextBusStop = function (bus) {
-        var data = this.fs.readFileSync("./information/Busses/".concat(bus.getBusRoute(), "/").concat(bus.getBusNumber(), ".txt"), 'utf8', function (error, data) {
-            if (error) {
-                console.log(error);
-                return;
-            }
-        });
-        return data.split('\n')[0].split(':')[1].replace("\r", "");
-    };
-    DataBase.prototype.getPreviousBusStop = function (bus) {
-        var data = this.fs.readFileSync("./information/Busses/".concat(bus.getBusRoute(), "/").concat(bus.getBusNumber(), ".txt"), 'utf8', function (error, data) {
-            if (error) {
-                console.log(error);
-                return;
-            }
-        });
-        return data.split('\n')[1].split(':')[1];
-    };
-    DataBase.prototype.setBusStopComingBusses = function (busStop, comingBusses) {
-    };
-    DataBase.prototype.setBusNextBusStop = function (bus, busStop) {
-        var data = this.fs.readFileSync("./information/Busses/".concat(bus.getBusRoute(), "/").concat(bus.getBusNumber(), ".txt"), 'utf8', function (error, data) {
-            if (error) {
-                console.log(error);
-                return;
-            }
-        });
-        data.split('\n')[1].split(':')[1] = data.split('\n')[0].split(':')[1];
-        data.split('\n')[0].split(':')[1] = busStop.GetName();
-    };
-    DataBase.prototype.getRouteBusses = function (busRoute) {
-        var busses = new Array;
-        this.fs.readdirSync("./information/Busses/".concat(busRoute)).
-            forEach(function (file) {
-            busses.push(new Bus(busRoute, file.replace(".txt", "")));
-        });
-        return busses;
-    };
-    return DataBase;
-}());
-var DataBaseProvider = /** @class */ (function () {
-    function DataBaseProvider() {
-        this.dataBase = new DataBase();
-    }
-    DataBaseProvider.prototype.getDataBase = function () {
-        return this.dataBase;
-    };
-    return DataBaseProvider;
-}());
 var Bus = /** @class */ (function () {
-    function Bus(busRoute, busNumber) {
-        this.busRoute = busRoute;
+    function Bus(busRouteNumber, busNumber) {
+        this.busRouteNumber = busRouteNumber;
         this.busNumber = busNumber;
+        this.nextBusStop = "";
     }
-    Bus.prototype.getBusRoute = function () {
-        return this.busRoute;
+    Bus.prototype.SetNextBusStop = function (nextBusStop) {
+        this.nextBusStop = nextBusStop;
     };
-    Bus.prototype.getBusNumber = function () {
+    Bus.prototype.GetNextBusStopName = function () {
+        return this.nextBusStop;
+    };
+    Bus.prototype.GetBusRouteNumber = function () {
+        return this.busRouteNumber;
+    };
+    Bus.prototype.GetBusNumber = function () {
         return this.busNumber;
     };
     return Bus;
 }());
-var BusStop = /** @class */ (function () {
-    function BusStop(busStopName) {
-        this.busStopName = busStopName;
+var Notifier = /** @class */ (function () {
+    function Notifier() {
+        this.webHooks = new Array();
     }
-    BusStop.prototype.GetName = function () {
-        return this.busStopName;
+    Notifier.prototype.AddWebhook = function (webHookHost) {
+        this.webHooks.push(webHookHost);
     };
-    return BusStop;
+    Notifier.prototype.Notify = function () {
+    };
+    return Notifier;
 }());
+var DataBase = /** @class */ (function () {
+    function DataBase() {
+        this.busses = new Array();
+        this.busStops = new Array();
+        this.busRoutes = new Array();
+        this.busses.push(new Bus(69, 1111));
+        this.busses.push(new Bus(228, 1112));
+        this.busStops.push("Остановка 1", "Остановка 2", "Остановка 3", "Остановка 4");
+        this.busRoutes.push(69, 228);
+    }
+    DataBase.prototype.SetNextBusStop = function (busNumber, busStop) {
+        var _a;
+        (_a = this.busses.find(function (b) { return b.GetBusNumber() == busNumber; })) === null || _a === void 0 ? void 0 : _a.SetNextBusStop(busStop);
+    };
+    DataBase.prototype.GetBusses = function () {
+        return this.busses;
+    };
+    DataBase.prototype.GetBusStops = function () {
+        return this.busStops;
+    };
+    DataBase.prototype.GetBusRoutes = function () {
+        return this.busRoutes;
+    };
+    return DataBase;
+}());
+var request = require('request');
 var express = require('express');
 var app = express();
-var HOST = '26.88.209.221';
+var HOST = '127.0.0.1';
 var PORT = 8080;
-var dataBase = new DataBaseProvider().getDataBase();
+var dataBase = new DataBase();
+var notifier = new Notifier();
 app.use(express.json());
-app.get('/Busses/:busRoute', function (req, res) {
-    var busRoute = req.params.busRoute;
-    res.status(200).send({
-        "Busses": dataBase.getRouteBusses(busRoute)
-    });
+app.post('/:busNumber', function (req, res) {
+    var busNumber = req.params.busNumber;
+    var nextBusStop = req.body.nextBusStop;
+    dataBase.SetNextBusStop(busNumber, nextBusStop);
+    notifier.Notify();
 });
-app.get('/Busses/:busRoute/:busNumber', function (req, res) {
-    var _a = req.params, busRoute = _a.busRoute, busNumber = _a.busNumber;
+app.get('/BusRoutes', function (req, res) {
+    var busRoutes = dataBase.GetBusRoutes();
     res.status(200).send({
-        "Next": dataBase.getNextBusStop(new Bus(busRoute, busNumber)),
-        "Previous": dataBase.getPreviousBusStop(new Bus(busRoute, busNumber))
+        busRoutes: busRoutes
     });
 });
 app.get('/BusStops', function (req, res) {
+    var busStops = dataBase.GetBusStops();
+    res.status(200).send({
+        busStops: busStops
+    });
 });
-app.post('/Busses/:busRoute/:busNumber', function (req, res) {
-    var _a = req.params, busRoute = _a.busRoute, busNumber = _a.busNumber;
-    var _b = res.body, nextBusStop = _b.nextBusStop, previousBusStop = _b.previousBusStop;
-    var bus = new Bus(busRoute, busNumber);
-    if (dataBase.busExists(bus) == false)
-        dataBase.createBus(bus);
-    dataBase.setBusNextBusStop(bus, new BusStop(nextBusStop));
+app.get('/BusRoutes/:busRouteNumber', function (req, res) {
+    var busRouteNumber = req.params.busRouteNumber;
+    var busses = dataBase.GetBusses().filter(function (b) { return b.GetBusRouteNumber() == busRouteNumber; });
+    res.status(200).send({
+        busses: busses
+    });
 });
-app.post('/BusStops/:busStopName', function (req, res) {
+app.get('/BusStops/:busStopName', function (req, res) {
     var busStopName = req.params.busStopName;
-    var comingBusses = res.body.comingBusses;
+    var busses = dataBase.GetBusses().filter(function (b) { return b.GetNextBusStopName() == busStopName; });
+    res.status(200).send({
+        busses: busses
+    });
+});
+app.put('/hooks', function (req, res) {
+    var webhookHost = req.body.webhookHost;
+    notifier.AddWebhook(webhookHost);
+    res.status(200).send({
+        "Status": "Fine"
+    });
 });
 app.listen(PORT, HOST, function () { return console.log("Started on http://".concat(HOST, ":").concat(PORT)); });
