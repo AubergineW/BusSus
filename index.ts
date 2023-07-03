@@ -30,11 +30,17 @@ class Notifier {
     private webHooks = new Array<string>();
 
     public AddWebhook(webHookHost : string) : void {
+        if (this.webHooks.find(w => w == webHookHost)){
+            return;
+        }
+
         this.webHooks.push(webHookHost);
     }
 
-    public Notify() : void {
-
+    public Notify(busNumber : number) : void {
+        this.webHooks.forEach(async webHook => {
+            //await fetch(webHook, { method: 'POST', body: busNumber.toString()})
+        });
     }
 }
 
@@ -47,7 +53,7 @@ class DataBase {
         this.busses.push(new Bus(69, 1111));
         this.busses.push(new Bus(228, 1112));
 
-        this.busStops.push("Остановка 1", "Остановка 2", "Остановка 3", "Остановка 4");
+        this.busStops.push("sexual harassment");
 
         this.busRoutes.push(69, 228);
     }
@@ -69,7 +75,6 @@ class DataBase {
     }
 }
 
-const request = require('request');
 const express = require('express');
 const app = express();
 const HOST = '127.0.0.1';
@@ -79,18 +84,22 @@ const notifier = new Notifier();
 
 app.use(express.json());
 
+app.post('/start', (req : any, res : any) => {
+
+});
+
 app.post('/:busNumber', (req : any, res : any) => {
     const { busNumber } = req.params;
     const { nextBusStop } = req.body;
 
     dataBase.SetNextBusStop(busNumber, nextBusStop);
-    notifier.Notify();
+    notifier.Notify(busNumber);
 })
 
 app.get('/BusRoutes', (req : any, res : any) => {
     var busRoutes = dataBase.GetBusRoutes();
     res.status(200).send({
-        busRoutes  
+        busRoutes
     });
 });
 
@@ -105,6 +114,14 @@ app.get('/BusRoutes/:busRouteNumber', (req : any, res : any) => {
     const { busRouteNumber } = req.params;
     var busses = dataBase.GetBusses().filter(b => b.GetBusRouteNumber() == busRouteNumber)
 
+    if (busses.length == 0){
+        res.status(404).send({
+            "Status" : "No such a bus route idiot"
+        });
+        
+        return;
+    }
+
     res.status(200).send({
         busses
     });
@@ -113,13 +130,23 @@ app.get('/BusRoutes/:busRouteNumber', (req : any, res : any) => {
 app.get('/BusStops/:busStopName', (req : any, res : any) => {
     const { busStopName } = req.params;
     var busses = dataBase.GetBusses().filter(b => b.GetNextBusStopName() == busStopName)
+
+    if (busses.length == 0){
+        res.status(404).send({
+            "Status" : "No such a bus stop idiot"
+        });
+
+        return;
+    }
+
     res.status(200).send({
         busses
     });
 });
 
-app.put('/hooks', (req : any, res : any) => {
+app.put('/hook', (req : any, res : any) => {
     const { webhookHost } = req.body;
+    console.log(req.body);
     notifier.AddWebhook(webhookHost);
     res.status(200).send({
         "Status" : "Fine"
