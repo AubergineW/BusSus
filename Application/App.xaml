@@ -1,0 +1,30 @@
+﻿<Application x:Class="BusSus.App"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:local="clr-namespace:BusSus"
+             StartupUri="MainWindow.xaml"
+             xmlns:viewModel="clr-namespace:BusSus.MVVM.ViewModel"
+             xmlns:view="clr-namespace:BusSus.MVVM.View">
+    <Application.Resources>
+        <ResourceDictionary>
+
+            <ResourceDictionary.MergedDictionaries>
+                
+            </ResourceDictionary.MergedDictionaries>
+
+            <DataTemplate DataType="{x:Type viewModel:StartViewModel}">
+                <view:StartView/>
+            </DataTemplate>
+
+            <DataTemplate DataType="{x:Type viewModel:BussesViewModel}">
+                <view:BussesView/>
+            </DataTemplate>
+            
+            <DataTemplate DataType="{x:Type viewModel:BusStopsViewModel}">
+                <view:BusStopsView/>
+            </DataTemplate>
+
+        </ResourceDictionary>
+
+    </Application.Resources>
+</Application>
